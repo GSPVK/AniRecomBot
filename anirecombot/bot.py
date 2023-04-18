@@ -158,7 +158,7 @@ async def next_title(message: types.Message, state: FSMContext):
         await create_recs(message=message, username=data['mal_nickname'])
 
     elif data['send_message'] == 'main menu':
-        await message.answer(text='I hope you find smth!', reply_markup=keyboards['main_keyboard'])
+        await message.answer(text='I hope you found something!', reply_markup=keyboards['main_keyboard'])
         await state.clear()
 
     else:
@@ -186,10 +186,10 @@ async def send_quote(message: types.Message):
     """
     Get random quote from https://animechan.vercel.app/
     """
-    data = requests.get('https://animechan.vercel.app/api/random').text
-    anime = json.loads(data)['anime']
-    character = json.loads(data)['character']
-    quote = json.loads(data)['quote']
+    data = requests.get('https://animechan.vercel.app/api/random').json()
+    anime = data['anime']
+    character = data['character']
+    quote = data['quote']
     await message.answer(f'<b>Anime:</b> {anime}\n<b>Character:</b> {character}\n\n<i>{quote}</i>')
 
 
@@ -200,8 +200,8 @@ async def random_image(message: types.Message):
     """
     categories = ['awoo', 'waifu', 'neko']
     category = choice(categories)
-    pic = requests.get(f'https://api.waifu.pics/sfw/{category}').text
-    url_pic = json.loads(pic)['url']
+    pic = requests.get(f'https://api.waifu.pics/sfw/{category}').json()
+    url_pic = pic['url']
     await message.answer_photo(url_pic)
 
 
@@ -210,8 +210,8 @@ async def send_baka(message: types.Message):
     """
     Get "Baka" from https://catboys.com/api/
     """
-    baka = requests.get('https://api.catboys.com/baka').text
-    url_baka = json.loads(baka)['url']
+    baka = requests.get('https://api.catboys.com/baka').json()
+    url_baka = baka['url']
     await message.answer_animation(url_baka)
 
 
