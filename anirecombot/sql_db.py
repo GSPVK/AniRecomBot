@@ -8,18 +8,18 @@ class RecommendationsDB:
         self.cursor = self.conn.cursor()
 
     def is_exist(self, tablename):
-        """Checking if a table exists"""
+        """Check if a table exists"""
         result = self.cursor.execute(f'''SELECT count(name) FROM sqlite_master 
         WHERE type="table" and name="{tablename}"''')
         return result.fetchone()[0]
 
     def get_all_recs(self, username):
-        """Getting recommendations"""
+        """Get recommendations"""
         result = self.cursor.execute(f'SELECT * from {username}')
         return result.fetchall()
 
     def add_recs(self, username, data):
-        """Adding recommendations to the database"""
+        """Add recommendations to the database"""
         self.cursor.execute(f'''CREATE TABLE {username} (
                         ID INTEGER,
                         Title text NOT NULL,
@@ -38,7 +38,7 @@ class RecommendationsDB:
         return self.conn.commit()
 
     def del_table(self, tablename):
-        """Deleting a table"""
+        """Delete table"""
         self.conn.execute(f'DROP TABLE {tablename}')
         return self.conn.commit()
 

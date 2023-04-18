@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import requests
 
@@ -86,13 +85,12 @@ async def recommended_anime_list(message: types.Message, state: FSMContext):
 @dp.message(Form.recomms)
 async def get_recommendations(message: Message, state: FSMContext):
     """
-    Getting recommendations for the user.
+    Get recommendations for the user.
 
-    Initially, it checks if the user exists in the database (first "if")
-    If the user is not in the database, then the entered message is checked for correctness,
-    depending on the result of the check, either recommendations are generated with a subsequent
-    transition to the scroll_recs state, or a message stating that the specified account does not
-    exist on the MyAnimeList
+    The code first checks if the user exists in the database (first "if")
+    If the user is not in the database, then the entered message is checked for correctness.
+    If the message is correct, it generates recommendations and transitions to the "Form.scroll_recs" state.
+    If the message is incorrect, it sends a message stating that the specified account doesn't exist on MyAnimeList.
     """
     await state.update_data(send_message=message.text.lower())
     data = await state.get_data()
@@ -126,7 +124,7 @@ async def get_recommendations(message: Message, state: FSMContext):
 
 async def create_recs(message, username):
     """
-    Placement in the database of a table with a list of recommendations. Title - username
+    Insert a new table with a list of recommendations into the database. Title - username
     """
     search = await message.answer(
         text=f"Let me conjure some recommendations, <b>{username}-san!</b>\n"
@@ -146,7 +144,7 @@ async def next_title(message: types.Message, state: FSMContext):
     """
     Interaction with the generated table of recommendations.
 
-    Updating the table (deleting the old one, creating a new one)
+    Update the table (delete the old one, create new)
     Return to main menu
     Show next recommendation.
     """
@@ -158,7 +156,7 @@ async def next_title(message: types.Message, state: FSMContext):
         await create_recs(message=message, username=data['mal_nickname'])
 
     elif data['send_message'] == 'main menu':
-        await message.answer(text='I hope you find smth!', reply_markup=keyboards['main_keyboard'])
+        await message.answer(text='I hope you found something!', reply_markup=keyboards['main_keyboard'])
         await state.clear()
 
     else:
@@ -171,12 +169,12 @@ async def next_title(message: types.Message, state: FSMContext):
             await state.clear()
 
 
-@dp.message(Text(('Next', 'Main Menu', 'Update recs')))
+@dp.message(Text(('Next', 'Main Menu', 'Update recs', 'Go back')))
 async def return_to_menu(message: types.Message):
     """
     In case of restarting the bot.
 
-    The state loses the user, and when you click on the buttons, nothing will happen.
+    The state loses the user, so clicking on buttons will have no effect.
     """
     await message.answer(text='Something went wrong...', reply_markup=keyboards['main_keyboard'])
 
@@ -186,10 +184,10 @@ async def send_quote(message: types.Message):
     """
     Get random quote from https://animechan.vercel.app/
     """
-    data = requests.get('https://animechan.vercel.app/api/random').text
-    anime = json.loads(data)['anime']
-    character = json.loads(data)['character']
-    quote = json.loads(data)['quote']
+    data = requests.get('https://animechan.vercel.app/api/random').json()
+    anime = data['anime']
+    character = data['character']
+    quote = data['quote']
     await message.answer(f'<b>Anime:</b> {anime}\n<b>Character:</b> {character}\n\n<i>{quote}</i>')
 
 
@@ -200,8 +198,8 @@ async def random_image(message: types.Message):
     """
     categories = ['awoo', 'waifu', 'neko']
     category = choice(categories)
-    pic = requests.get(f'https://api.waifu.pics/sfw/{category}').text
-    url_pic = json.loads(pic)['url']
+    pic = requests.get(f'https://api.waifu.pics/sfw/{category}').json()
+    url_pic = pic['url']
     await message.answer_photo(url_pic)
 
 
@@ -210,8 +208,8 @@ async def send_baka(message: types.Message):
     """
     Get "Baka" from https://catboys.com/api/
     """
-    baka = requests.get('https://api.catboys.com/baka').text
-    url_baka = json.loads(baka)['url']
+    baka = requests.get('https://api.catboys.com/baka').json()
+    url_baka = baka['url']
     await message.answer_animation(url_baka)
 
 
@@ -241,7 +239,7 @@ async def echo_message(message: types.Message):
 
 async def main():
     """
-    Starting the polling process.
+    Start the polling process.
     """
     await dp.start_polling(bot)
 
