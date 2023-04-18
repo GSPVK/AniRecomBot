@@ -158,7 +158,7 @@ async def next_title(message: types.Message, state: FSMContext):
         await create_recs(message=message, username=data['mal_nickname'])
 
     elif data['send_message'] == 'main menu':
-        await message.answer(text='I hope you found smth!', reply_markup=keyboards['main_keyboard'])
+        await message.answer(text='I hope you found something!', reply_markup=keyboards['main_keyboard'])
         await state.clear()
 
     else:
