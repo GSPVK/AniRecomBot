@@ -7,7 +7,7 @@ from sql_db import RecommendationsDB
 
 def scrape(user: str) -> tuple:
     """
-    Scraping the recommendation list from https://anime.ameo.dev/
+    Scrape the recommendations list from https://anime.ameo.dev/
 
     :param user: MAL username
     :return: List of anime links, recommendation page
@@ -32,7 +32,7 @@ def scrape(user: str) -> tuple:
 
 def get_recs(anime_links: list, anime_list: list) -> dict:
     """
-    Creating a dictionary with information about recommendations.
+    Create a dictionary with information about recommendations.
 
     :param anime_links: List of anime links
     :param anime_list: Recommendation page
@@ -60,7 +60,7 @@ def get_recs(anime_links: list, anime_list: list) -> dict:
 
 def adding_recommendations(user: str):
     """
-    Creating a list of recommendations for the user, placing in the database.
+    Create a list of recommendations for the user and store it in the database.
 
     :param user: MAL username
     """
