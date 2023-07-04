@@ -5,7 +5,7 @@ from selenium.webdriver.common.by import By
 from sql_db import RecommendationsDB
 
 
-def scrape(user: str) -> tuple:
+def scrape(user: str) -> tuple or str:
     """
     Scrape the recommendations list from https://anime.ameo.dev/
 
@@ -58,7 +58,7 @@ def get_recs(anime_links: list, anime_list: list) -> dict:
     return recs_list
 
 
-def adding_recommendations(user: str):
+def create_recommendations(user: str):
     """
     Create a list of recommendations for the user and store it in the database.
 
