@@ -14,7 +14,7 @@ from aiogram.types import Message
 
 from asgiref.sync import sync_to_async
 from config_reader import config
-from scraper import adding_recommendations
+from scraper import create_recommendations
 from sql_db import RecommendationsDB
 
 bot = Bot(token=config.bot_token.get_secret_value(), parse_mode='HTML')
@@ -92,28 +92,31 @@ async def get_recommendations(message: Message, state: FSMContext):
     If the message is correct, it generates recommendations and transitions to the "Form.scroll_recs" state.
     If the message is incorrect, it sends a message stating that the specified account doesn't exist on MyAnimeList.
     """
-    await state.update_data(send_message=message.text.lower())
-    data = await state.get_data()
+    user_message = message.text.lower()
 
-    if recs_db.is_exist(data['send_message']):
-        await state.update_data(mal_nickname=message.text.lower())
-        data = await state.get_data()
-        await message.answer(text=f'Welcome back, <b>{data["mal_nickname"]}-san!</b>')
-        users_recs_dict[message.from_user.id] = form_cards(data['mal_nickname'])
-        await message.answer(next(users_recs_dict[message.from_user.id]),
+    if recs_db.is_exist(user_message):
+        await state.update_data(mal_nickname=user_message)
+        mal_nickname = user_message
+        await message.answer(text=f'Welcome back, <b>{mal_nickname}-san!</b>')
+
+        try:
+            users_recs_dict[mal_nickname]
+        except KeyError:
+            users_recs_dict[mal_nickname] = form_cards(mal_nickname)
+        await message.answer(next(users_recs_dict[mal_nickname]),
                              reply_markup=keyboards['next_button'])
         await state.set_state(Form.scroll_recs)
 
     else:
-        get_req = requests.get(f'https://api.jikan.moe/v4/users/{data["send_message"]}')
+        get_req = requests.get(f'https://api.jikan.moe/v4/users/{user_message}')
 
         if get_req.status_code == 200 and get_req.json().get('data'):
-            await state.update_data(mal_nickname=message.text.lower())
-            data = await state.get_data()
-            await create_recs(message=message, username=data['send_message'])
+            await state.update_data(mal_nickname=user_message)
+            mal_nickname = user_message
+            await create_recs(message=message, username=mal_nickname)
             await state.set_state(Form.scroll_recs)
 
-        elif data['send_message'] == 'go back':
+        elif user_message == 'go back':
             await message.answer(f's..sure..', reply_markup=keyboards['main_keyboard'])
             await state.clear()
 
@@ -131,7 +134,8 @@ async def create_recs(message, username):
              f"the first time it should take approx. 20 seconds")
     anim = await message.answer_animation(
         animation='CgACAgIAAxkBAAID1mQQnJJIpIBe74w-kMTze2ZfRiqPAAJXLAAC4oqJSKBUjy8gxIHzLwQ')
-    await sync_to_async(adding_recommendations)(username)
+
+    await sync_to_async(create_recommendations)(username)
     await anim.delete()
     await search.edit_text(text='Done!')
     users_recs_dict[message.from_user.id] = form_cards(username)
@@ -148,14 +152,15 @@ async def next_title(message: types.Message, state: FSMContext):
     Return to main menu
     Show next recommendation.
     """
-    await state.update_data(send_message=message.text.lower())
+    user_message = message.text.lower()
     data = await state.get_data()
+    nickname = data['mal_nickname']
 
-    if data['send_message'] == 'update recs':
-        recs_db.del_table(data['mal_nickname'])
-        await create_recs(message=message, username=data['mal_nickname'])
+    if user_message == 'update recs':
+        recs_db.del_table(nickname)
+        await create_recs(message=message, username=nickname)
 
-    elif data['send_message'] == 'main menu':
+    elif user_message == 'main menu':
         await message.answer(text='I hope you found something!', reply_markup=keyboards['main_keyboard'])
         await state.clear()
 
@@ -166,6 +171,7 @@ async def next_title(message: types.Message, state: FSMContext):
             await message.answer(text='Something went wrong...', reply_markup=keyboards['main_keyboard'])
         except StopIteration:
             await message.answer(text='The End Of Recommendations!', reply_markup=keyboards['main_keyboard'])
+            users_recs_dict.pop(message.from_user.id)
             await state.clear()
 
 
