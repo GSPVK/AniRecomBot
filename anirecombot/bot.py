@@ -100,10 +100,10 @@ async def get_recommendations(message: Message, state: FSMContext):
         await message.answer(text=f'Welcome back, <b>{mal_nickname}-san!</b>')
 
         try:
-            users_recs_dict[message.from_user.id]
+            users_recs_dict[mal_nickname]
         except KeyError:
-            users_recs_dict[message.from_user.id] = form_cards(mal_nickname)
-        await message.answer(next(users_recs_dict[message.from_user.id]),
+            users_recs_dict[mal_nickname] = form_cards(mal_nickname)
+        await message.answer(next(users_recs_dict[mal_nickname]),
                              reply_markup=keyboards['next_button'])
         await state.set_state(Form.scroll_recs)
 
