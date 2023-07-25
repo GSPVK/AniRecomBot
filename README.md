@@ -5,6 +5,7 @@ Recommendations are obtained through scraping from the site https://anime.ameo.d
 
 The bot can also show a random quote, picture or gif using various APIs.
 
+![](demo.gif)
 
 ## Getting started
 
