@@ -1,57 +1,30 @@
 import asyncio
 import logging
 import requests
-
-from random import choice
+import keyboards
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.filters import Text
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from asgiref.sync import sync_to_async
 from config_reader import config
 from scraper import create_recommendations
-from sql_db import RecommendationsDB
+from sql_db import recs_db
+from random import choice
+
+from json import JSONDecodeError
 
 bot = Bot(token=config.bot_token.get_secret_value(), parse_mode='HTML')
 dp = Dispatcher(bot=bot)
-recs_db = RecommendationsDB('../recs_db.db')
 
 
 class Form(StatesGroup):
     recomms = State()
     scroll_recs = State()
-
-
-def create_keyboards():
-    keyboards_dict = {}
-    builder = ReplyKeyboardBuilder()
-    builder.row(
-        types.KeyboardButton(text='Quote'),
-        types.KeyboardButton(text='PicRandom'),
-        types.KeyboardButton(text='B..Baka!')
-    )
-    builder.row(types.KeyboardButton(text='Anime Recommendations'))
-    main_keyboard = builder.as_markup(resize_keyboard=True, input_field_placeholder='Choose wisely...')
-    keyboards_dict['main_keyboard'] = main_keyboard
-
-    builder = ReplyKeyboardBuilder()
-    builder.row(types.KeyboardButton(text='Next'),
-                types.KeyboardButton(text='Main Menu'),
-                types.KeyboardButton(text='Update recs'))
-    next_button = builder.as_markup(resize_keyboard=True)
-    keyboards_dict['next_button'] = next_button
-
-    builder = ReplyKeyboardBuilder()
-    builder.row(types.KeyboardButton(text='Go back'))
-    go_back = builder.as_markup(resize_keyboard=True)
-    keyboards_dict['go_back'] = go_back
-
-    return keyboards_dict
 
 
 def form_cards(username):
@@ -73,12 +46,12 @@ async def cmd_start(message: types.Message):
     /start command handler.
     """
     await message.answer('Welcome to AniRecomBot! Here you can get anime recommendations, pictures, quotes and so on.',
-                         reply_markup=keyboards['main_keyboard'])
+                         reply_markup=keyboards.main)
 
 
 @dp.message(Text('Anime Recommendations'))
 async def recommended_anime_list(message: types.Message, state: FSMContext):
-    await message.answer(text='Enter your\'s MAL nickname:', reply_markup=keyboards['go_back'])
+    await message.answer(text='Enter your\'s MAL nickname:', reply_markup=keyboards.go_back)
     await state.set_state(Form.recomms)
 
 
@@ -104,7 +77,7 @@ async def get_recommendations(message: Message, state: FSMContext):
         except KeyError:
             users_recs_dict[mal_nickname] = form_cards(mal_nickname)
         await message.answer(next(users_recs_dict[mal_nickname]),
-                             reply_markup=keyboards['next_button'])
+                             reply_markup=keyboards.scroll_recs)
         await state.set_state(Form.scroll_recs)
 
     else:
@@ -117,7 +90,7 @@ async def get_recommendations(message: Message, state: FSMContext):
             await state.set_state(Form.scroll_recs)
 
         elif user_message == 'go back':
-            await message.answer(f's..sure..', reply_markup=keyboards['main_keyboard'])
+            await message.answer(f's..sure..', reply_markup=keyboards.main)
             await state.clear()
 
         else:
@@ -138,9 +111,9 @@ async def create_recs(message, username):
     await sync_to_async(create_recommendations)(username)
     await anim.delete()
     await search.edit_text(text='Done!')
-    users_recs_dict[message.from_user.id] = form_cards(username)
-    await message.answer(next(users_recs_dict[message.from_user.id]),
-                         reply_markup=keyboards['next_button'])
+    users_recs_dict[username] = form_cards(username)
+    await message.answer(next(users_recs_dict[username]),
+                         reply_markup=keyboards.scroll_recs)
 
 
 @dp.message(Form.scroll_recs)
@@ -161,17 +134,17 @@ async def next_title(message: types.Message, state: FSMContext):
         await create_recs(message=message, username=nickname)
 
     elif user_message == 'main menu':
-        await message.answer(text='I hope you found something!', reply_markup=keyboards['main_keyboard'])
+        await message.answer(text='I hope you found something!', reply_markup=keyboards.main)
         await state.clear()
 
     else:
         try:
-            await message.answer(next(users_recs_dict[message.from_user.id]))
+            await message.answer(next(users_recs_dict[nickname]))
         except KeyError:
-            await message.answer(text='Something went wrong...', reply_markup=keyboards['main_keyboard'])
+            await message.answer(text='Something went wrong...', reply_markup=keyboards.main)
         except StopIteration:
-            await message.answer(text='The End Of Recommendations!', reply_markup=keyboards['main_keyboard'])
-            users_recs_dict.pop(message.from_user.id)
+            await message.answer(text='The End Of Recommendations!', reply_markup=keyboards.main)
+            users_recs_dict.pop(nickname)
             await state.clear()
 
 
@@ -182,19 +155,23 @@ async def return_to_menu(message: types.Message):
 
     The state loses the user, so clicking on buttons will have no effect.
     """
-    await message.answer(text='Something went wrong...', reply_markup=keyboards['main_keyboard'])
+    await message.answer(text='Something went wrong...', reply_markup=keyboards.main)
 
 
 @dp.message(Text('Quote'))
 async def send_quote(message: types.Message):
     """
-    Get random quote from https://animechan.vercel.app/
+    Get random quote from https://animechan.xyz/
     """
-    data = requests.get('https://animechan.vercel.app/api/random').json()
-    anime = data['anime']
-    character = data['character']
-    quote = data['quote']
-    await message.answer(f'<b>Anime:</b> {anime}\n<b>Character:</b> {character}\n\n<i>{quote}</i>')
+    try:
+        data = requests.get('https://animechan.xyz/api/random').json()
+    except JSONDecodeError:
+        await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a random quote. Please try again later.')
+    else:
+        anime = data['anime']
+        character = data['character']
+        quote = data['quote']
+        await message.answer(f'<b>Anime:</b> {anime}\n<b>Character:</b> {character}\n\n<i>{quote}</i>')
 
 
 @dp.message(Text('PicRandom'))
@@ -204,9 +181,13 @@ async def random_image(message: types.Message):
     """
     categories = ['awoo', 'waifu', 'neko']
     category = choice(categories)
-    pic = requests.get(f'https://api.waifu.pics/sfw/{category}').json()
-    url_pic = pic['url']
-    await message.answer_photo(url_pic)
+    try:
+        pic = requests.get(f'https://api.waifu.pics/sfw/{category}').json()
+    except JSONDecodeError:
+        await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a PicRandom. Please try again later.')
+    else:
+        url_pic = pic['url']
+        await message.answer_photo(url_pic)
 
 
 @dp.message(Text('B..Baka!'))
@@ -214,9 +195,14 @@ async def send_baka(message: types.Message):
     """
     Get "Baka" from https://catboys.com/api/
     """
-    baka = requests.get('https://api.catboys.com/baka').json()
-    url_baka = baka['url']
-    await message.answer_animation(url_baka)
+    try:
+        baka = requests.get('https://api.catboys.com/baka').json()
+    except JSONDecodeError:
+        await message.answer(
+            f'I\'m sorry, but I\'m I couldn\'t find any "baka!" gifs at the moment. Please try again later.')
+    else:
+        url_baka = baka['url']
+        await message.answer_animation(url_baka)
 
 
 @dp.message(F.animation)
@@ -251,7 +237,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    keyboards = create_keyboards()
     users_recs_dict = {}
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

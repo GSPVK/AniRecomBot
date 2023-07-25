@@ -1,31 +1,54 @@
 from time import sleep
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from sql_db import RecommendationsDB
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.chrome.options import Options
+
+from sql_db import recs_db
 
 
-def scrape(user: str) -> tuple or str:
+def scrape(user: str) -> tuple:
     """
     Scrape the recommendations list from https://anime.ameo.dev/
+
+    sleep(2) is used to allow the page to fully load and make 50 recommendations available for scraping.
+    Without this wait, the page will only load 20 recommendations.
 
     :param user: MAL username
     :return: List of anime links, recommendation page
     """
     url = f'https://anime.ameo.dev/user/{user}/recommendations'
     links = []
-    driver = webdriver.Chrome()
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+
+    # for debug remove options from string below
+    driver = webdriver.Chrome(options=chrome_options)
+
     driver.get(url)
     sleep(2)
+    WebDriverWait(driver, 5).until(
+        EC.presence_of_element_located((By.CLASS_NAME, 'recommendation'))
+    )
     html_text = driver.page_source
     soup = BeautifulSoup(html_text, 'lxml')
     recs = soup.find_all('div', class_='recommendation svelte-k28mqj')
 
-    for i, _ in enumerate(recs, 1):
+    for i in range(1, len(recs) + 1):
+        WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, f'/html/body/div[1]/div[3]/div[2]/div[{i}]/div/div[2]'))
+        )
         driver.find_element(By.XPATH, f'/html/body/div[1]/div[3]/div[2]/div[{i}]/div/div[2]').click()
+        WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, f'/html/body/div[1]/div[3]/div[2]/div[{i}]/div/div[1]/div/a'))
+        )
         link = driver.find_element(By.XPATH, f'/html/body/div[1]/div[3]/div[2]/div[{i}]/div/div[1]/div/a')
         link = link.get_attribute('href')
         links.append(link)
+
+    driver.quit()
 
     return links, recs
 
@@ -41,8 +64,6 @@ def get_recs(anime_links: list, anime_list: list) -> dict:
     recs_list = {}
 
     for i, anime in enumerate(anime_list, 1):
-        recs_list[i] = {}
-
         title = anime.find('div', class_='title-text svelte-k28mqj').text
         genres = anime.find('div', class_='genres svelte-k28mqj').text
         syn = anime.find('div', class_='synopsis svelte-k28mqj').text
@@ -67,5 +88,4 @@ def create_recommendations(user: str):
     anilinks, recs = scrape(user)
     anilist = get_recs(anilinks, recs)
 
-    recs_db = RecommendationsDB('../recs_db.db')
     recs_db.add_recs(user, anilist)

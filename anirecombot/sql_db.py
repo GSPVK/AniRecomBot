@@ -4,7 +4,7 @@ import sqlite3
 class RecommendationsDB:
 
     def __init__(self, db_file):
-        self.conn = sqlite3.connect(db_file)
+        self.conn = sqlite3.connect(db_file, check_same_thread=False)
         self.cursor = self.conn.cursor()
 
     def is_exist(self, tablename):
@@ -21,7 +21,7 @@ class RecommendationsDB:
     def add_recs(self, username, data):
         """Add recommendations to the database"""
         self.cursor.execute(f'''CREATE TABLE {username} (
-                        ID INTEGER,
+                        ID INTEGER PRIMARY KEY,
                         Title text NOT NULL,
                         Genres text NOT NULL,
                         Plan_To_Watch text NOT NULL,
@@ -45,3 +45,6 @@ class RecommendationsDB:
     def close(self):
         """Close the connection."""
         self.conn.close()
+
+
+recs_db = RecommendationsDB('../recs_db.db')
