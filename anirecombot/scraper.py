@@ -1,6 +1,7 @@
 from time import sleep
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -9,17 +10,17 @@ from selenium.webdriver.chrome.options import Options
 from sql_db import recs_db
 
 
-def scrape(user: str) -> tuple:
+def scrape(mal_nickname: str) -> tuple:
     """
     Scrape the recommendations list from https://anime.ameo.dev/
 
     sleep(2) is used to allow the page to fully load and make 50 recommendations available for scraping.
     Without this wait, the page will only load 20 recommendations.
 
-    :param user: MAL username
+    :param mal_nickname: MAL username
     :return: List of anime links, recommendation page
     """
-    url = f'https://anime.ameo.dev/user/{user}/recommendations'
+    url = f'https://anime.ameo.dev/user/{mal_nickname}/recommendations'
     links = []
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -79,13 +80,13 @@ def get_recs(anime_links: list, anime_list: list) -> dict:
     return recs_list
 
 
-def adding_recommendations(user: str):
+def create_recommendations(mal_nickname: str):
     """
     Create a list of recommendations for the user and store it in the database.
 
-    :param user: MAL username
+    :param mal_nickname: MAL username
     """
-    anilinks, recs = scrape(user)
+    anilinks, recs = scrape(mal_nickname)
     anilist = get_recs(anilinks, recs)
 
-    recs_db.add_recs(user, anilist)
+    recs_db.add_recs(mal_nickname, anilist)
