@@ -1,6 +1,7 @@
-from time import sleep
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -12,29 +13,26 @@ def scrape(mal_nickname: str) -> tuple:
     """
     Scrape the recommendations list from https://anime.ameo.dev/
 
-    sleep(2) is used to allow the page to fully load and make 50 recommendations available for scraping.
-    Without this wait, the page will only load 20 recommendations.
 
     :param mal_nickname: MAL username
     :return: List of anime links, recommendation page
     """
-    url = f'https://anime.ameo.dev/user/{mal_nickname}/recommendations'
-    links = []
     chrome_options = Options()
     chrome_options.add_argument("--headless")
+    # For a clear demonstration of scraping/debugging, remove "options" from the "driver" variable
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
-    # for debug remove options from string below
-    driver = webdriver.Chrome(options=chrome_options)
-
+    url = f'https://anime.ameo.dev/user/{mal_nickname}/recommendations'
     driver.get(url)
-    sleep(2)
-    WebDriverWait(driver, 5).until(
-        EC.presence_of_element_located((By.CLASS_NAME, 'recommendation'))
-    )
+
+    recs_num = 50
+    WebDriverWait(driver, 10).until(
+        lambda browser: len(driver.find_elements(By.CSS_SELECTOR, '.recommendation.svelte-k28mqj')) == recs_num)
     html_text = driver.page_source
-    soup = BeautifulSoup(html_text, 'lxml')
+    soup = BeautifulSoup(html_text, 'html.parser')
     recs = soup.find_all('div', class_='recommendation svelte-k28mqj')
 
+    links = []
     for i in range(1, len(recs) + 1):
         WebDriverWait(driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, f'/html/body/div[1]/div[3]/div[2]/div[{i}]/div/div[2]'))
@@ -48,43 +46,41 @@ def scrape(mal_nickname: str) -> tuple:
         links.append(link)
 
     driver.quit()
-
     return links, recs
 
 
-def get_recs(anime_links: list, anime_list: list) -> dict:
+def get_recs(links: list, recs: list) -> dict:
     """
     Create a dictionary with information about recommendations.
 
-    :param anime_links: List of anime links
-    :param anime_list: Recommendation page
+    :param links: List of anime links
+    :param recs: Recommendation page
     :return: Dictionary of recommendations
     """
-    recs_list = {}
+    recomms = {}
 
-    for i, anime in enumerate(anime_list, 1):
+    for i, anime in enumerate(recs, 1):
         title = anime.find('div', class_='title-text svelte-k28mqj').text
         genres = anime.find('div', class_='genres svelte-k28mqj').text
         syn = anime.find('div', class_='synopsis svelte-k28mqj').text
         plan = anime['data-plan-to-watch'].title()
 
-        recs_list[i] = {'id': i,
+        recomms[i] = {'id': i,
                         'Title': title,
                         'Genres': genres,
                         'Synopsis': syn.split('\n')[0],
                         'Plan To Watch': plan,
-                        'Link': anime_links[i - 1]}
+                        'Link': links[i - 1]}
 
-    return recs_list
+    return recomms
 
 
 def create_recommendations(mal_nickname: str):
     """
-    Create a list of recommendations for the user and store it in the database.
+    Create a dictionary of recommendations for the user and store it in the database.
 
     :param mal_nickname: MAL username
     """
-    anilinks, recs = scrape(mal_nickname)
-    anilist = get_recs(anilinks, recs)
-
-    recs_db.add_recs(mal_nickname, anilist)
+    links, recs = scrape(mal_nickname)
+    recomms = get_recs(links, recs)
+    recs_db.add_recs(mal_nickname, recomms)
