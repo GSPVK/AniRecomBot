@@ -6,7 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.chrome.options import Options
-from sql_db import recs_db
+from anirecombot.sql_db import recs_db
 
 
 def scrape(mal_nickname: str) -> tuple:
