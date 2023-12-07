@@ -21,8 +21,11 @@ The bot executes all commands using the corresponding buttons in the menu.
     - `Main Menu` - Return to the main menu.
 
 ## Getting started
-Commands in this instruction are provided for Linux. If you are using Windows, you can find similar commands in the command block (under the step-by-step instructions) after the '#' comment marker.
 
+Commands in this instruction are provided for Linux. If you are using Windows, you can find similar commands in the
+command block (under the step-by-step instructions) after the '#' comment marker.
+
+0. You must have firefox installed.
 1. Clone this repository to your local machine.
 2. Create a virtualenv (This step is optional, but highly recommended to avoid dependency conflicts)
    `python3 -m venv .venv` (You don't need to run it again)

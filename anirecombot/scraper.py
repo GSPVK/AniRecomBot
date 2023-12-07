@@ -1,11 +1,10 @@
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import FirefoxOptions
 from anirecombot.sql_db import recs_db
 
 
@@ -17,10 +16,10 @@ def scrape(mal_nickname: str) -> tuple:
     :param mal_nickname: MAL username
     :return: List of anime links, recommendation page
     """
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    firefox_options = FirefoxOptions()
+    firefox_options.add_argument("--headless")
     # For a clear demonstration of scraping/debugging, remove "options" from the "driver" variable
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+    driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=firefox_options)
 
     url = f'https://anime.ameo.dev/user/{mal_nickname}/recommendations'
     driver.get(url)
