@@ -9,8 +9,8 @@ class RecommendationsDB:
 
     def is_exist(self, tablename):
         """Check if a table exists"""
-        result = self.cursor.execute(f'''SELECT count(name) FROM sqlite_master 
-        WHERE type="table" and name="{tablename}"''')
+        query = "SELECT count(name) FROM sqlite_master WHERE type='table' and name=?"
+        result = self.cursor.execute(query, (tablename,))
         return result.fetchone()[0]
 
     def get_all_recs(self, username):
@@ -24,7 +24,7 @@ class RecommendationsDB:
                         ID INTEGER PRIMARY KEY,
                         Title text NOT NULL,
                         Genres text NOT NULL,
-                        Plan_To_Watch text NOT NULL,
+                        PlanToWatch text NOT NULL,
                         Synopsis text NOT NULL,
                         Link text NOT NULL)''')
 

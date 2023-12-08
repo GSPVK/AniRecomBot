@@ -6,6 +6,8 @@ from aiogram.types import Message
 from aiogram.filters import Text
 from aiogram.exceptions import TelegramBadRequest
 
+from requests.exceptions import ConnectionError
+
 router = Router()
 
 
@@ -16,7 +18,7 @@ async def send_quote(message: Message):
     """
     try:
         data = requests.get('https://animechan.xyz/api/random').json()
-    except (JSONDecodeError, TelegramBadRequest):
+    except (JSONDecodeError, TelegramBadRequest, ConnectionError):
         await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a random quote. Please try again later.')
     else:
         anime = data['anime']
@@ -38,7 +40,7 @@ async def random_image(message: Message):
 
     try:
         pic = requests.get(f'https://api.waifu.pics/sfw/{category}').json()
-    except (JSONDecodeError, TelegramBadRequest):
+    except (JSONDecodeError, TelegramBadRequest, ConnectionError):
         await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a PicRandom. Please try again later.')
     else:
         url_pic = pic['url']
@@ -52,7 +54,7 @@ async def send_baka(message: Message):
     """
     try:
         baka = requests.get('https://api.catboys.com/baka').json()
-    except (JSONDecodeError, TelegramBadRequest):
+    except (JSONDecodeError, TelegramBadRequest, ConnectionError):
         await message.answer(
             f'I\'m sorry, but I\'m I couldn\'t find any "baka!" gifs at the moment. Please try again later.')
     else:

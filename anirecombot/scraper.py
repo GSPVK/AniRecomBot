@@ -24,7 +24,7 @@ def scrape(mal_nickname: str) -> tuple:
     url = f'https://anime.ameo.dev/user/{mal_nickname}/recommendations'
     driver.get(url)
 
-    recs_num = 50
+    recs_num = 50  # number of recommendations to scrape (0...50)
     WebDriverWait(driver, 10).until(
         lambda browser: len(driver.find_elements(By.CSS_SELECTOR, '.recommendation.svelte-k28mqj')) == recs_num)
     html_text = driver.page_source
@@ -65,11 +65,11 @@ def get_recs(links: list, recs: list) -> dict:
         plan = anime['data-plan-to-watch'].title()
 
         recomms[i] = {'id': i,
-                        'Title': title,
-                        'Genres': genres,
-                        'Synopsis': syn.split('\n')[0],
-                        'Plan To Watch': plan,
-                        'Link': links[i - 1]}
+                      'Title': title,
+                      'Genres': genres,
+                      'Synopsis': syn.split('\n')[0],
+                      'Plan To Watch': plan,
+                      'Link': links[i - 1]}
 
     return recomms
 
