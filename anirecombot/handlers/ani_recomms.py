@@ -1,21 +1,17 @@
 import requests
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Text
-from aiogram.filters.state import State, StatesGroup
+
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
 from anirecombot.sql_db import recs_db
 from anirecombot.scraper import create_recommendations
-from anirecombot.keyboards import recomm_kb
+from anirecombot.keyboards import main_kb, recomm_kb
+from anirecombot.states.ani_recoms import RecommendationState
 
 router = Router()
 users_recs_dict = {}
-
-
-class Form(StatesGroup):
-    recomms = State()
-    scroll_recs = State()
 
 
 def form_cards(mal_nickname: str):
@@ -49,14 +45,14 @@ async def create_recs(message: Message, mal_nickname: str):
                          reply_markup=recomm_kb.scroll_recs)
 
 
-@router.message(Text('Anime Recommendations'))
-async def recommended_anime_list(message: Message, state: FSMContext):
+@router.message(F.text.casefold() == 'anime recommendations')
+async def recommended_anime_list(message: Message, state: FSMContext) -> None:
     await message.answer(text='Enter your\'s MAL nickname:', reply_markup=recomm_kb.go_back)
-    await state.set_state(Form.recomms)
+    await state.set_state(RecommendationState.recomms)
 
 
-@router.message(Form.recomms)
-async def get_recommendations(message: Message, state: FSMContext):
+@router.message(RecommendationState.recomms)
+async def get_recommendations(message: Message, state: FSMContext) -> None:
     """
     Get recommendations for the user.
 
@@ -78,7 +74,7 @@ async def get_recommendations(message: Message, state: FSMContext):
             users_recs_dict[mal_nickname] = form_cards(mal_nickname)
         await message.answer(next(users_recs_dict[mal_nickname]),
                              reply_markup=recomm_kb.scroll_recs)
-        await state.set_state(Form.scroll_recs)
+        await state.set_state(RecommendationState.scroll_recs)
 
     else:
         get_req = requests.get(f'https://api.jikan.moe/v4/users/{user_message}')
@@ -87,18 +83,13 @@ async def get_recommendations(message: Message, state: FSMContext):
             mal_nickname = user_message
             await state.update_data(mal_nickname=mal_nickname)
             await create_recs(message=message, mal_nickname=mal_nickname)
-            await state.set_state(Form.scroll_recs)
-
-        elif user_message == 'go back':
-            await message.answer(f's..sure..', reply_markup=recomm_kb.main)
-            await state.clear()
-
+            await state.set_state(RecommendationState.scroll_recs)
         else:
             await message.answer(text=f"Account doesn't exist.")
 
 
-@router.message(Form.scroll_recs)
-async def next_title(message: Message, state: FSMContext):
+@router.message(RecommendationState.scroll_recs, F.text.casefold() == "next")
+async def next_title(message: Message, state: FSMContext) -> None:
     """
     Interaction with the generated table of recommendations.
 
@@ -106,34 +97,37 @@ async def next_title(message: Message, state: FSMContext):
     Return to main menu
     Show next recommendation.
     """
-    user_message = message.text.lower()
     data = await state.get_data()
     mal_nickname = data['mal_nickname']
 
-    if user_message == 'update recs':
-        recs_db.del_table(mal_nickname)
-        await create_recs(message=message, mal_nickname=mal_nickname)
-
-    elif user_message == 'main menu':
-        await message.answer(text='I hope you found something!', reply_markup=recomm_kb.main)
+    try:
+        await message.answer(next(users_recs_dict[mal_nickname]))
+    except KeyError:
+        await message.answer(text='Something went wrong...', reply_markup=main_kb.main)
+    except StopIteration:
+        await message.answer(text='The End Of Recommendations!', reply_markup=main_kb.main)
+        users_recs_dict.pop(mal_nickname)
         await state.clear()
 
-    else:
-        try:
-            await message.answer(next(users_recs_dict[mal_nickname]))
-        except KeyError:
-            await message.answer(text='Something went wrong...', reply_markup=recomm_kb.main)
-        except StopIteration:
-            await message.answer(text='The End Of Recommendations!', reply_markup=recomm_kb.main)
-            users_recs_dict.pop(mal_nickname)
-            await state.clear()
+
+@router.message(RecommendationState.scroll_recs, F.text.casefold() == "update recs")
+async def update_recs(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    mal_nickname = data['mal_nickname']
+    recs_db.del_table(mal_nickname)
+    await create_recs(message=message, mal_nickname=mal_nickname)
 
 
-@router.message(Text(('Next', 'Main Menu', 'Update recs', 'Go back')))
-async def return_to_menu(message: Message):
+@router.message(RecommendationState.scroll_recs)
+async def and_you_dont_seem_to_understand(message: Message) -> None:
+    await message.answer(text='I don\'t understand...')
+
+
+@router.message(Text(('Next', 'Update recs')))
+async def return_to_menu(message: Message) -> None:
     """
     In case of restarting the bot.
 
     The state loses the user, so clicking on buttons will have no effect.
     """
-    await message.answer(text='Something went wrong...', reply_markup=recomm_kb.main)
+    await message.answer(text='Something went wrong...', reply_markup=main_kb.main)

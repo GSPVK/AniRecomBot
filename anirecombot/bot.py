@@ -1,7 +1,9 @@
 import asyncio
 import logging
+
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+
 from anirecombot.config_reader import config
 from anirecombot.handlers import setup_routers
 

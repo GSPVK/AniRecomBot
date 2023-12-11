@@ -5,7 +5,7 @@ router = Router()
 
 
 @router.message(F.animation)
-async def echo_animation(message: Message):
+async def echo_animation(message: Message) -> None:
     """
     Response with the same gif.
     """
@@ -13,7 +13,7 @@ async def echo_animation(message: Message):
 
 
 @router.message(F.sticker)
-async def echo_gif(message: Message):
+async def echo_gif(message: Message) -> None:
     """
     Response with the same sticker.
     """
@@ -21,7 +21,7 @@ async def echo_gif(message: Message):
 
 
 @router.message()
-async def echo_message(message: Message):
+async def echo_message(message: Message) -> None:
     """
     Response with the same message with case change.
     """

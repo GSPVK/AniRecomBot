@@ -1,7 +1,7 @@
 # AniRecomBot
 
 The bot generates a list of recommendations based on the MyAnimeList account.
-Recommendations are obtained through scraping from the site https://anime.ameo.dev/
+Recommendations are obtained through scraping from this site: https://anime.ameo.dev/
 
 The bot can also show a random quote, picture or gif using various APIs.
 
@@ -13,6 +13,13 @@ The bot executes all commands using the corresponding buttons in the menu.
 
 - `Quote` - Random quote.
 - `PicRandom` - Random picture.
+    - `SFW`
+        - `Get picture`
+    - `NSFW`
+        - `Get picture`
+    - `I WANT EVERYTHING!`
+        - `Get SFW pic`
+        - `Get NSFW pic`
 - `B..baka!` - Random "baka" gif.
 - `Anime Recommendations` - Recommendations. When clicked, it will ask for a nickname for "MyAnimeList". Has its own
   submenu:

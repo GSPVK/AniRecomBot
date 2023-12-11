@@ -74,7 +74,7 @@ def get_recs(links: list, recs: list) -> dict:
     return recomms
 
 
-def create_recommendations(mal_nickname: str):
+def create_recommendations(mal_nickname: str) -> None:
     """
     Create a dictionary of recommendations for the user and store it in the database.
 

@@ -1,1 +1,1 @@
-from . import recomm_kb
+from . import main_kb, recomm_kb, picrandom_kb
