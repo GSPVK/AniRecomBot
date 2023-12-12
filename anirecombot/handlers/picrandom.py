@@ -6,7 +6,6 @@ from random import choice
 
 from aiogram import Router, F, html
 from aiogram.types import Message
-from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
 from anirecombot.keyboards import picrandom_kb, main_kb
@@ -132,7 +131,7 @@ async def random_both_categories(message: Message, state: FSMContext) -> None:
 
 
 @router.message(
-    Text(('SFW', 'NSFW', 'I WANT EVERYTHING!', 'Select all', 'Back to categories', 'Get picture')))
+    F.text.casefold().in_(('SFW', 'NSFW', 'I WANT EVERYTHING!', 'Select all', 'Back to categories', 'Get picture')))
 async def return_to_menu(message: Message) -> None:
     """
     In case of restarting the bot.

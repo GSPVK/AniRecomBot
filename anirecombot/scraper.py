@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from webdriver_manager.firefox import GeckoDriverManager
+
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -19,7 +19,7 @@ def scrape(mal_nickname: str) -> tuple:
     firefox_options = FirefoxOptions()
     firefox_options.add_argument("--headless")
     # For a clear demonstration of scraping/debugging, remove "options" from the "driver" variable
-    driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=firefox_options)
+    driver = webdriver.Firefox(options=firefox_options)
 
     url = f'https://anime.ameo.dev/user/{mal_nickname}/recommendations'
     driver.get(url)

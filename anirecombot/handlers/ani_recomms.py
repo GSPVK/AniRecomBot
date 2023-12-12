@@ -1,8 +1,6 @@
 import requests
 from aiogram import Router, F
 from aiogram.types import Message
-from aiogram.filters import Text
-
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
 from anirecombot.sql_db import recs_db
@@ -11,7 +9,14 @@ from anirecombot.keyboards import main_kb, recomm_kb
 from anirecombot.states.ani_recoms import RecommendationState
 
 router = Router()
+
+# Stores the username and a generator
+# The generator contains recommendation cards, and when called, it returns one recommendation card at a time.
 users_recs_dict = {}
+
+# Stores information about users who either generate a list of recommendations (True) or
+# are not currently generating anything (None). {user_id: True/None}
+user_generating_lists = {}
 
 
 def form_cards(mal_nickname: str):
@@ -27,28 +32,38 @@ def form_cards(mal_nickname: str):
         yield card
 
 
-async def create_recs(message: Message, mal_nickname: str):
+async def create_recs(message: Message, state: FSMContext, mal_nickname: str):
     """
     Insert a new table with a list of recommendations into the database. Title - mal_nickname
     """
     search = await message.answer(
         text=f"Let me conjure some recommendations, <b>{mal_nickname}-san!</b>\n"
-             f"the first time it should take approx. 20 seconds")
+             f"the first time it should take approx. 20-30 seconds\n"
+             f"But while they are being generated, you can go back and do something else!"
+    )
     anim = await message.answer_animation(
-        animation='CgACAgIAAxkBAAID1mQQnJJIpIBe74w-kMTze2ZfRiqPAAJXLAAC4oqJSKBUjy8gxIHzLwQ')
-
+        animation='CgACAgIAAxkBAAID1mQQnJJIpIBe74w-kMTze2ZfRiqPAAJXLAAC4oqJSKBUjy8gxIHzLwQ',
+        reply_markup=recomm_kb.go_back_while_generating
+    )
+    user_generating_lists[message.from_user.id] = True
     await sync_to_async(create_recommendations)(mal_nickname)
     await anim.delete()
     await search.edit_text(text='Done!')
+    user_generating_lists[message.from_user.id] = None
     users_recs_dict[mal_nickname] = form_cards(mal_nickname)
-    await message.answer(next(users_recs_dict[mal_nickname]),
-                         reply_markup=recomm_kb.scroll_recs)
+    if await state.get_state() in ('RecommendationState:recomms', 'RecommendationState:scroll_recs'):
+        await message.answer(next(users_recs_dict[mal_nickname]),
+                             reply_markup=recomm_kb.scroll_recs)
 
 
 @router.message(F.text.casefold() == 'anime recommendations')
 async def recommended_anime_list(message: Message, state: FSMContext) -> None:
-    await message.answer(text='Enter your\'s MAL nickname:', reply_markup=recomm_kb.go_back)
-    await state.set_state(RecommendationState.recomms)
+    is_generating = user_generating_lists.get(message.from_user.id, None)
+    if not is_generating:
+        await message.answer(text='Enter your\'s MAL nickname:', reply_markup=recomm_kb.go_back)
+        await state.set_state(RecommendationState.recomms)
+    else:
+        await message.answer(text='Подожди, ну!', reply_markup=recomm_kb.go_back)
 
 
 @router.message(RecommendationState.recomms)
@@ -82,7 +97,7 @@ async def get_recommendations(message: Message, state: FSMContext) -> None:
         if get_req.status_code == 200 and get_req.json().get('data'):
             mal_nickname = user_message
             await state.update_data(mal_nickname=mal_nickname)
-            await create_recs(message=message, mal_nickname=mal_nickname)
+            await create_recs(message=message, state=state, mal_nickname=mal_nickname)
             await state.set_state(RecommendationState.scroll_recs)
         else:
             await message.answer(text=f"Account doesn't exist.")
@@ -115,7 +130,7 @@ async def update_recs(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     mal_nickname = data['mal_nickname']
     recs_db.del_table(mal_nickname)
-    await create_recs(message=message, mal_nickname=mal_nickname)
+    await create_recs(message=message, state=state, mal_nickname=mal_nickname)
 
 
 @router.message(RecommendationState.scroll_recs)
@@ -123,7 +138,7 @@ async def and_you_dont_seem_to_understand(message: Message) -> None:
     await message.answer(text='I don\'t understand...')
 
 
-@router.message(Text(('Next', 'Update recs')))
+@router.message(F.text.casefold().in_(('Next', 'Update recs')))
 async def return_to_menu(message: Message) -> None:
     """
     In case of restarting the bot.

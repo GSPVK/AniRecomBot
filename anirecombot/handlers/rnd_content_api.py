@@ -2,15 +2,14 @@ import requests
 from requests.exceptions import ConnectionError
 from json import JSONDecodeError
 
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message
-from aiogram.filters import Text
 from aiogram.exceptions import TelegramBadRequest
 
 router = Router()
 
 
-@router.message(Text('Quote'))
+@router.message(F.text.casefold() == 'quote')
 async def send_quote(message: Message) -> None:
     """
     Get random quote from https://animechan.xyz/
@@ -26,7 +25,7 @@ async def send_quote(message: Message) -> None:
         await message.answer(f'<b>Anime:</b> {anime}\n<b>Character:</b> {character}\n\n<i>{quote}</i>')
 
 
-@router.message(Text('B..Baka!'))
+@router.message(F.text.casefold() == 'b..baka!')
 async def send_baka(message: Message) -> None:
     """
     Get "Baka" from https://catboys.com/api/
