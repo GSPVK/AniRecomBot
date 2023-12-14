@@ -1,11 +1,9 @@
 # AniRecomBot
 
 The bot generates a list of recommendations based on the MyAnimeList account.
-Recommendations are obtained through scraping from this site: https://anime.ameo.dev/
-
-The bot can also show a random quote, picture or gif using various APIs.
-
-You can check out the bot here: https://t.me/anirecombot
+Recommendations are obtained through scraping from this site: https://anime.ameo.dev/  
+The bot can also show a random quote, picture or gif using various APIs.  
+**You can check out the bot here:** https://t.me/anirecombot
 
 ![](demo.gif)
 
