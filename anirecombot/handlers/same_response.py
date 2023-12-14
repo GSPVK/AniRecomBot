@@ -7,9 +7,10 @@ router = Router()
 @router.message(F.animation)
 async def echo_animation(message: Message) -> None:
     """
-    Response with the same gif.
+    Response with file id.
     """
-    await message.reply_animation(message.animation.file_id)
+    await message.reply("file_id")
+    await message.reply(message.animation.file_id)
 
 
 @router.message(F.sticker)

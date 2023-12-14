@@ -4,6 +4,7 @@ The bot generates a list of recommendations based on the MyAnimeList account.
 Recommendations are obtained through scraping from this site: https://anime.ameo.dev/
 
 The bot can also show a random quote, picture or gif using various APIs.
+You can check out the bot here: https://t.me/anirecombot
 
 ![](demo.gif)
 
@@ -31,6 +32,9 @@ The bot executes all commands using the corresponding buttons in the menu.
 
 Commands in this instruction are provided for Linux. If you are using Windows, you can find similar commands in the
 command block (under the step-by-step instructions) after the '#' comment marker.
+
+Also, if you want to create a loading animation, then send the bot a GIF and insert the received file_id into 
+the animation parameter in `handlers/ani_recomms.py:48`, then uncomment the lines.
 
 0. You must have firefox installed.
 1. Clone this repository to your local machine.

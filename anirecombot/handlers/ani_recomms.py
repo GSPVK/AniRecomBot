@@ -36,19 +36,23 @@ async def create_recs(message: Message, state: FSMContext, mal_nickname: str):
     """
     Insert a new table with a list of recommendations into the database. Title - mal_nickname
     """
-    search = await message.answer(
+    search_msg = await message.answer(
         text=f"Let me conjure some recommendations, <b>{mal_nickname}-san!</b>\n"
              f"the first time it should take approx. 20-30 seconds\n"
              f"But while they are being generated, you can go back and do something else!"
     )
-    anim = await message.answer_animation(
-        animation='CgACAgIAAxkBAAID1mQQnJJIpIBe74w-kMTze2ZfRiqPAAJXLAAC4oqJSKBUjy8gxIHzLwQ',
-        reply_markup=recomm_kb.go_back_while_generating
-    )
+
+    # If you want to create a loading animation, then send the bot a GIF and insert the received file_id into
+    # the animation parameter below, then uncomment the lines.
+    #
+    # anim = await message.answer_animation(
+    #     animation='FILE_ID',
+    #     reply_markup=recomm_kb.go_back_while_generating
+    # )
     user_generating_lists[message.from_user.id] = True
     await sync_to_async(create_recommendations)(mal_nickname)
-    await anim.delete()
-    await search.edit_text(text='Done!')
+    # await anim.delete()
+    await search_msg.edit_text(text='Done!')
     user_generating_lists[message.from_user.id] = None
     users_recs_dict[mal_nickname] = form_cards(mal_nickname)
     if await state.get_state() in ('RecommendationState:recomms', 'RecommendationState:scroll_recs'):
@@ -63,7 +67,7 @@ async def recommended_anime_list(message: Message, state: FSMContext) -> None:
         await message.answer(text='Enter your\'s MAL nickname:', reply_markup=recomm_kb.go_back)
         await state.set_state(RecommendationState.recomms)
     else:
-        await message.answer(text='Подожди, ну!', reply_markup=recomm_kb.go_back)
+        await message.answer(text='Recommendations are not ready yet!', reply_markup=recomm_kb.go_back)
 
 
 @router.message(RecommendationState.recomms)

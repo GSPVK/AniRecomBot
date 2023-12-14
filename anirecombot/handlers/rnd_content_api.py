@@ -17,7 +17,7 @@ async def send_quote(message: Message) -> None:
     try:
         data = requests.get('https://animechan.xyz/api/random').json()
     except (JSONDecodeError, TelegramBadRequest, ConnectionError):
-        await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a random quote. Please try again later.')
+        await message.answer(f'I\'m sorry, but i currently unable to fetch a random quote. Please try again later.')
     else:
         anime = data['anime']
         character = data['character']
