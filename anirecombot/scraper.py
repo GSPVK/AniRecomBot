@@ -5,7 +5,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver import FirefoxOptions
-from anirecombot.sql_db import recs_db
 
 
 def scrape(mal_nickname: str) -> tuple:
@@ -48,7 +47,7 @@ def scrape(mal_nickname: str) -> tuple:
     return links, recs
 
 
-def get_recs(links: list, recs: list) -> dict:
+def get_recs(links: list, recs: list) -> list:
     """
     Create a dictionary with information about recommendations.
 
@@ -56,25 +55,24 @@ def get_recs(links: list, recs: list) -> dict:
     :param recs: Recommendation page
     :return: Dictionary of recommendations
     """
-    recomms = {}
+    cards = []
 
-    for i, anime in enumerate(recs, 1):
+    for i, anime in enumerate(recs):
         title = anime.find('div', class_='title-text svelte-k28mqj').text
         genres = anime.find('div', class_='genres svelte-k28mqj').text
-        syn = anime.find('div', class_='synopsis svelte-k28mqj').text
+        syn = anime.find('div', class_='synopsis svelte-k28mqj').text.split('\n')[0]
         plan = anime['data-plan-to-watch'].title()
 
-        recomms[i] = {'id': i,
-                      'Title': title,
-                      'Genres': genres,
-                      'Synopsis': syn.split('\n')[0],
-                      'Plan To Watch': plan,
-                      'Link': links[i - 1]}
+        cards.append(f'<b>Title:</b> {title}\n'
+                     f'<b>Genres:</b> {genres}\n'
+                     f'<b>Plan To Watch:</b> {plan}\n\n'
+                     f'<b>Synopsis:</b> {syn}\n\n'
+                     f'{links[i]}')
 
-    return recomms
+    return cards
 
 
-def create_recommendations(mal_nickname: str) -> None:
+def create_recommendations(mal_nickname: str) -> list:
     """
     Create a dictionary of recommendations for the user and store it in the database.
 
@@ -82,4 +80,4 @@ def create_recommendations(mal_nickname: str) -> None:
     """
     links, recs = scrape(mal_nickname)
     recomms = get_recs(links, recs)
-    recs_db.add_recs(mal_nickname, recomms)
+    return recomms

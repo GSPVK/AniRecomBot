@@ -3,6 +3,7 @@
 The bot generates a list of recommendations based on the MyAnimeList account.
 Recommendations are obtained through scraping from this site: https://anime.ameo.dev/  
 The bot can also show a random quote, picture or gif using various APIs.  
+
 **You can check out the bot here:** https://t.me/anirecombot
 
 ![](demo.gif)
@@ -35,14 +36,13 @@ command block (under the step-by-step instructions) after the '#' comment marker
 Also, if you want to create a loading animation, then send the bot a GIF and insert the received file_id into 
 the animation parameter in `handlers/ani_recomms.py:48`, then uncomment the lines.
 
-0. You must have firefox installed.
+0. You must have redis and firefox installed.
 1. Clone this repository to your local machine.
 2. Create a virtualenv (This step is optional, but highly recommended to avoid dependency conflicts)
    `python3 -m venv .venv` (You don't need to run it again)
    `. .venv/bin/activate` (You must run this every time you open the project in a new shell)
 3. Install requirements.
-4. Create an `.env` file in the root of project directory (there is a `.envExample` file for you to use as a template.) and add your Telegram bot API token https://t.me/BotFather
-   `BOT_TOKEN=bot-token-here`
+4. Create an `.env` file in the root of project directory (there is a `.envExample` file for you to use as a template.)
 5. Run `bot.py` from project directory.
     `python3 -m anirecombot.bot`
 

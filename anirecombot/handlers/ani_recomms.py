@@ -3,38 +3,18 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
-from anirecombot.sql_db import recs_db
 from anirecombot.scraper import create_recommendations
 from anirecombot.keyboards import main_kb, recomm_kb
 from anirecombot.states.ani_recoms import RecommendationState
 
+from redis.asyncio.client import Redis
+
 router = Router()
 
-# Stores the username and a generator
-# The generator contains recommendation cards, and when called, it returns one recommendation card at a time.
-users_recs_dict = {}
 
-# Stores information about users who either generate a list of recommendations (True) or
-# are not currently generating anything (None). {user_id: True/None}
-user_generating_lists = {}
-
-
-def form_cards(mal_nickname: str):
-    records = recs_db.get_all_recs(mal_nickname)
-
-    for row in records:
-        card = f'<b>Title:</b> {row[1]}\n' \
-               f'<b>Genres:</b> {row[2]}\n' \
-               f'<b>Plan To Watch:</b> {row[3]}\n\n' \
-               f'<b>Synopsis:</b> {row[4]}\n\n' \
-               f'{row[5]}'
-
-        yield card
-
-
-async def create_recs(message: Message, state: FSMContext, mal_nickname: str):
+async def create_recs(message: Message, state: FSMContext, mal_nickname: str, redis: Redis):
     """
-    Insert a new table with a list of recommendations into the database. Title - mal_nickname
+    Insert recommendations into the database. Title - mal_nickname
     """
     search_msg = await message.answer(
         text=f"Let me conjure some recommendations, <b>{mal_nickname}-san!</b>\n"
@@ -49,104 +29,88 @@ async def create_recs(message: Message, state: FSMContext, mal_nickname: str):
     #     animation='FILE_ID',
     #     reply_markup=recomm_kb.go_back_while_generating
     # )
-    user_generating_lists[message.from_user.id] = True
-    await sync_to_async(create_recommendations)(mal_nickname)
+
+    await redis.set(str(message.from_user.id), 'generating')
+    cards = await sync_to_async(create_recommendations)(mal_nickname)
+    await redis.rpush(mal_nickname, *cards)
+
     # await anim.delete()
     await search_msg.edit_text(text='Done!')
-    user_generating_lists[message.from_user.id] = None
-    users_recs_dict[mal_nickname] = form_cards(mal_nickname)
+    await redis.delete(str(message.from_user.id))
+
     if await state.get_state() in ('RecommendationState:recomms', 'RecommendationState:scroll_recs'):
-        await message.answer(next(users_recs_dict[mal_nickname]),
-                             reply_markup=recomm_kb.scroll_recs)
+        card = await redis.lpop(mal_nickname)
+        await message.answer(card, reply_markup=recomm_kb.scroll_recs)
 
 
 @router.message(F.text.casefold() == 'anime recommendations')
-async def recommended_anime_list(message: Message, state: FSMContext) -> None:
-    is_generating = user_generating_lists.get(message.from_user.id, None)
-    if not is_generating:
+async def recommended_anime_list(message: Message, state: FSMContext, redis: Redis) -> None:
+    is_generating = await redis.get(str(message.from_user.id))
+    if is_generating:
+        await message.answer(text='Recommendations are not ready yet!', reply_markup=main_kb.main)
+    else:
         await message.answer(text='Enter your\'s MAL nickname:', reply_markup=recomm_kb.go_back)
         await state.set_state(RecommendationState.recomms)
-    else:
-        await message.answer(text='Recommendations are not ready yet!', reply_markup=recomm_kb.go_back)
 
 
 @router.message(RecommendationState.recomms)
-async def get_recommendations(message: Message, state: FSMContext) -> None:
+async def get_recommendations(message: Message, state: FSMContext, redis: Redis) -> None:
     """
     Get recommendations for the user.
 
-    The code first checks if the user exists in the database (first "if")
+    The code first checks if the user exists in the database (first "if").
     If the user is not in the database, then the entered message is checked for correctness.
-    If the message is correct, it generates recommendations and transitions to the "Form.scroll_recs" state.
+    If the message is correct, it generates recommendations and transitions to the "scroll_recs" state.
     Else, it sends a message stating that the specified account doesn't exist on MyAnimeList.
     """
     user_message = message.text.lower()
 
-    if recs_db.is_exist(user_message):
+    if await redis.exists(user_message):
         mal_nickname = user_message
         await state.update_data(mal_nickname=mal_nickname)
         await message.answer(text=f'Welcome back, <b>{mal_nickname}-san!</b>')
 
-        try:
-            users_recs_dict[mal_nickname]
-        except KeyError:
-            users_recs_dict[mal_nickname] = form_cards(mal_nickname)
-        await message.answer(next(users_recs_dict[mal_nickname]),
-                             reply_markup=recomm_kb.scroll_recs)
+        card = await redis.lpop(mal_nickname)
+        await message.answer(card, reply_markup=recomm_kb.scroll_recs)
         await state.set_state(RecommendationState.scroll_recs)
 
     else:
-        get_req = requests.get(f'https://api.jikan.moe/v4/users/{user_message}')
+        mal_acc = requests.get(f'https://api.jikan.moe/v4/users/{user_message}')
 
-        if get_req.status_code == 200 and get_req.json().get('data'):
+        if mal_acc.status_code == 200 and mal_acc.json().get('data'):
             mal_nickname = user_message
             await state.update_data(mal_nickname=mal_nickname)
-            await create_recs(message=message, state=state, mal_nickname=mal_nickname)
+            await create_recs(message=message, state=state, mal_nickname=mal_nickname, redis=redis)
             await state.set_state(RecommendationState.scroll_recs)
         else:
             await message.answer(text=f"Account doesn't exist.")
 
 
 @router.message(RecommendationState.scroll_recs, F.text.casefold() == "next")
-async def next_title(message: Message, state: FSMContext) -> None:
+async def scroll(message: Message, state: FSMContext, redis: Redis) -> None:
     """
     Interaction with the generated table of recommendations.
-
-    Update the table (delete the old one, create new)
-    Return to main menu
-    Show next recommendation.
     """
     data = await state.get_data()
     mal_nickname = data['mal_nickname']
 
-    try:
-        await message.answer(next(users_recs_dict[mal_nickname]))
-    except KeyError:
-        await message.answer(text='Something went wrong...', reply_markup=main_kb.main)
-    except StopIteration:
+    card = await redis.lpop(mal_nickname)
+    if card is None:
         await message.answer(text='The End Of Recommendations!', reply_markup=main_kb.main)
-        users_recs_dict.pop(mal_nickname)
         await state.clear()
+    else:
+        await message.answer(card, reply_markup=recomm_kb.scroll_recs)
+        await state.set_state(RecommendationState.scroll_recs)
 
 
 @router.message(RecommendationState.scroll_recs, F.text.casefold() == "update recs")
-async def update_recs(message: Message, state: FSMContext) -> None:
+async def update_recs(message: Message, state: FSMContext, redis: Redis) -> None:
     data = await state.get_data()
     mal_nickname = data['mal_nickname']
-    recs_db.del_table(mal_nickname)
-    await create_recs(message=message, state=state, mal_nickname=mal_nickname)
+    await redis.delete(mal_nickname)
+    await create_recs(message=message, state=state, mal_nickname=mal_nickname, redis=redis)
 
 
 @router.message(RecommendationState.scroll_recs)
 async def and_you_dont_seem_to_understand(message: Message) -> None:
     await message.answer(text='I don\'t understand...')
-
-
-@router.message(F.text.casefold().in_(('Next', 'Update recs')))
-async def return_to_menu(message: Message) -> None:
-    """
-    In case of restarting the bot.
-
-    The state loses the user, so clicking on buttons will have no effect.
-    """
-    await message.answer(text='Something went wrong...', reply_markup=main_kb.main)

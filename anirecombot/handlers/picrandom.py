@@ -8,7 +8,7 @@ from aiogram import Router, F, html
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
-from anirecombot.keyboards import picrandom_kb, main_kb
+from anirecombot.keyboards import picrandom_kb
 from anirecombot.states.picrandom import PicrandomState
 
 router = Router()
@@ -128,14 +128,3 @@ async def random_both_categories(message: Message, state: FSMContext) -> None:
         category = user_message
         tags = categories[category]
         await get_pict(message, category, tags)
-
-
-@router.message(
-    F.text.casefold().in_(('SFW', 'NSFW', 'I WANT EVERYTHING!', 'Select all', 'Back to categories', 'Get picture')))
-async def return_to_menu(message: Message) -> None:
-    """
-    In case of restarting the bot.
-
-    The state loses the user, so clicking on buttons will have no effect.
-    """
-    await message.answer(text='Something went wrong...', reply_markup=main_kb.main)
