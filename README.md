@@ -29,6 +29,7 @@ The bot executes all commands using the corresponding buttons in the menu.
     - `Main Menu` - Return to the main menu.
 
 ## Getting started
+This project can be installed via Pip or Docker. 
 
 Commands in this instruction are provided for Linux. If you are using Windows, you can find similar commands in the
 command block (under the step-by-step instructions) after the '#' comment marker.
@@ -36,15 +37,13 @@ command block (under the step-by-step instructions) after the '#' comment marker
 Also, if you want to create a loading animation, then send the bot a GIF and insert the received file_id into 
 the animation parameter in `handlers/ani_recomms.py:48`, then uncomment the lines.
 
+### Pip
 0. You must have redis and firefox installed.
 1. Clone this repository to your local machine.
 2. Create a virtualenv (This step is optional, but highly recommended to avoid dependency conflicts)
-   `python3 -m venv .venv` (You don't need to run it again)
-   `. .venv/bin/activate` (You must run this every time you open the project in a new shell)
 3. Install requirements.
-4. Create an `.env` file in the root of project directory (there is a `.envExample` file for you to use as a template.)
-5. Run `bot.py` from project directory.
-    `python3 -m anirecombot.bot`
+4. Create a `.env` file in the root of project directory (there is a `.envExample` file for you to use as a template.)
+5. Run `python3 -m anirecombot.bot`
 
 ```shell
 $ git clone https://github.com/GSPVK/AniRecomBot/
@@ -55,3 +54,8 @@ $ . .venv/bin/activate # on windows run ".venv/Scripts/activate"
 # Create a .env file, as described in step 4
 (.venv) $ python3 -m anirecombot.bot # on windows run "py -m anirecombot.bot"
 ```
+
+### Docker
+1. Clone this repository to your local machine.
+2. Create a `.env` file in the root of project directory (there is a `.envExample` file for you to use as a template.) 
+3. run `docker-compose up -d`

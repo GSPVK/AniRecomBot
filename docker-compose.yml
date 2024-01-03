@@ -1,0 +1,19 @@
+version: "3.7"
+services:
+  redis:
+    image: redis:alpine
+    command:
+      - redis-server
+    env_file:
+      - ./.env
+    restart: on-failure
+    ports:
+      - "6379:6379"
+  bot:
+    build: .
+    command: sh -c "python3 -m anirecombot.bot"
+    env_file:
+      - ./.env
+    restart: always
+    depends_on:
+      - redis
