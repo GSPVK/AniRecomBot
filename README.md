@@ -6,8 +6,6 @@ The bot can also show a random quote, picture or gif using various APIs.
 
 **You can check out the bot here:** https://t.me/anirecombot
 
-![](demo.gif)
-
 ## 🤖 Usage
 
 The bot executes all commands using the corresponding buttons in the menu.
@@ -22,16 +20,15 @@ The bot executes all commands using the corresponding buttons in the menu.
         - `Get SFW pic`
         - `Get NSFW pic`
 - `B..baka!` - Random "baka" gif.
-- `Anime Recommendations` - Recommendations. When clicked, it will ask for a nickname for "MyAnimeList". Has its own
+- `Anime Recommendations` - Recommendations. When clicked, it will ask for a "MyAnimeList" nickname. Has its own
   submenu:
     - `Next` - Show next recommendation.
     - `Update recs` - Update list of recommendations.
-    - `Main Menu` - Return to the main menu.
 
 ## ⚙️Getting started:
-This project can be installed via Pip or Docker. To get started, clone the repository to your local machine 
+This project can be installed via 🐍Pip or 🐳Docker. To get started, clone the repository to your local machine 
 and navigate to the project directory.
-``` shell
+```shell
 $ git clone https://github.com/GSPVK/AniRecomBot/
 $ cd AniRecomBot
 ```
@@ -53,7 +50,7 @@ $ . .venv/bin/activate # on win: ".venv/Scripts/activate"
 
 ### 🐳 Docker
 1. Create a `.env` file in the root of project directory (there is a `.envExample` to use as a template.) 
-2. Run `docker-compose up -d`
+2. Run `docker compose up`
 
-Also, if you want to create a loading animation, then send the bot a GIF and insert the received file_id into 
+Also, if you want to create a loading animation, then send the bot a GIF and insert the received `file_id` into 
 the animation parameter in `handlers/ani_recomms.py:48`, then uncomment the lines.
