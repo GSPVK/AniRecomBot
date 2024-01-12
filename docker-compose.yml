@@ -2,13 +2,14 @@ version: "3.7"
 services:
   redis:
     image: redis:alpine
-    command:
-      - redis-server
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf --port ${REDIS_PORT}
     env_file:
       - ./.env
     restart: on-failure
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:${REDIS_PORT}"
 
   bot:
     build: .
