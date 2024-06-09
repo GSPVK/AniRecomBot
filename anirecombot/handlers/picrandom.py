@@ -1,25 +1,25 @@
 import os
-import requests
-from requests.exceptions import ConnectionError
 from json import JSONDecodeError
 from random import choice
 
+import requests
 from aiogram import Router, F, html
-from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+from requests.exceptions import ConnectionError
+
 from anirecombot.keyboards import picrandom_kb
 from anirecombot.states.picrandom import PicrandomState
 
 router = Router()
 
-categories = {
+waifu_pics_categories = {
     'sfw': ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat',
             'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap',
             'kill', 'kick', 'happy', 'wink', 'poke', 'dance', 'cringe'],
     'nsfw': ['waifu', 'neko', 'trap', 'blowjob']
 }
-
 
 async def get_image_extension(url: str) -> str:
     file_path = url.rsplit('/', 1)[-1]
@@ -63,7 +63,7 @@ async def random_image(message: Message, state: FSMContext) -> None:
 @router.message(PicrandomState.choose_category, F.text.casefold().in_(('sfw', 'nsfw')))
 async def one_category(message: Message, state: FSMContext) -> None:
     category = message.text.lower()
-    tags = categories[category]
+    tags = waifu_pics_categories[category]
     tags_list = ", ".join(tags)
     await message.answer(
         text=f'Please list the tags you are interested in (listed below) separated by spaces or commas, or select all.'
@@ -97,14 +97,14 @@ async def choose_tag(message: Message, state: FSMContext) -> None:
     category = data['category']
     entered_tags = user_message.replace(',', ' ').split()
     if entered_tags == ['select', 'all']:
-        chosen_tags = categories[category]
+        chosen_tags = waifu_pics_categories[category]
     else:
         chosen_tags = []
         for tag in entered_tags:
-            if tag in categories[category]:
+            if tag in waifu_pics_categories[category]:
                 chosen_tags.append(tag)
     if chosen_tags:
-        chosen_list = "all" if len(chosen_tags) == len(categories[category]) else ", ".join(chosen_tags)
+        chosen_list = "all" if len(chosen_tags) == len(waifu_pics_categories[category]) else ", ".join(chosen_tags)
         await message.answer(text=f'Selected tags: <i>{chosen_list}</i>', reply_markup=picrandom_kb.one_category)
         await state.update_data(tags=chosen_tags)
         await state.set_state(PicrandomState.one_category)
@@ -126,5 +126,5 @@ async def random_both_categories(message: Message, state: FSMContext) -> None:
     user_message = message.text.lower()
     if user_message in ('sfw', 'nsfw'):
         category = user_message
-        tags = categories[category]
+        tags = waifu_pics_categories[category]
         await get_pict(message, category, tags)

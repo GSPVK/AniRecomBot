@@ -28,13 +28,13 @@ async def send_quote(message: Message) -> None:
 @router.message(F.text.casefold() == 'b..baka!')
 async def send_baka(message: Message) -> None:
     """
-    Get "Baka" from https://catboys.com/api/
+    Get "Baka" from https://nekos.best/api/v2/baka
     """
     try:
-        baka = requests.get('https://api.catboys.com/baka').json()
+        baka = requests.get('https://nekos.best/api/v2/baka').json()
     except (JSONDecodeError, TelegramBadRequest, ConnectionError):
         await message.answer(
             f'I\'m sorry, but i couldn\'t find any "baka!" gifs at the moment. Please try again later.')
     else:
-        url_baka = baka['url']
+        url_baka = baka['results'][0]['url']
         await message.answer_animation(url_baka)

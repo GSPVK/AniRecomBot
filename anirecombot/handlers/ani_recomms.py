@@ -1,13 +1,13 @@
 import requests
 from aiogram import Router, F
-from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 from asgiref.sync import sync_to_async
-from anirecombot.scraper import create_recommendations
-from anirecombot.keyboards import main_kb, recomm_kb
-from anirecombot.states.ani_recoms import RecommendationState
-
 from redis.asyncio.client import Redis
+
+from anirecombot.keyboards import main_kb, recomm_kb
+from anirecombot.scraper import create_recommendations
+from anirecombot.states.ani_recoms import RecommendationState
 
 router = Router()
 
