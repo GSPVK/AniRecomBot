@@ -1,6 +1,7 @@
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram.types import Message
+
 from anirecombot.keyboards import main_kb
 
 router = Router()
