@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import logging.config
 
+import yaml
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 from redis import asyncio as aioredis
@@ -25,11 +27,16 @@ async def main():
     dp.include_routers(router)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, redis=redis)
+    logging.info("Bot started!")
 
 
 if __name__ == "__main__":
     try:
-        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger()
+        with open('logging.yaml', 'r') as f:
+            log_config = yaml.safe_load(f.read())
+        logging.config.dictConfig(log_config)
+
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logging.info("Bot stopped!")
