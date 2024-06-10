@@ -1,30 +1,26 @@
-import os
 from json import JSONDecodeError
+from logging import getLogger
 from random import choice
 
-import requests
 from aiogram import Router, F, html
+from aiogram.client.session import aiohttp
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from requests.exceptions import ConnectionError
 
 from anirecombot.keyboards import picrandom_kb
 from anirecombot.states.picrandom import PicrandomState
+from anirecombot.utils.content import get_image_extension
 
 router = Router()
+logger = getLogger(__name__)
 
 waifu_pics_categories = {
-    'sfw': ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat',
+    'sfw': ('waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat',
             'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap',
-            'kill', 'kick', 'happy', 'wink', 'poke', 'dance', 'cringe'],
-    'nsfw': ['waifu', 'neko', 'trap', 'blowjob']
+            'kill', 'kick', 'happy', 'wink', 'poke', 'dance', 'cringe'),
+    'nsfw': ('waifu', 'neko', 'trap', 'blowjob')
 }
-
-async def get_image_extension(url: str) -> str:
-    file_path = url.rsplit('/', 1)[-1]
-    image_name, image_extension = os.path.splitext(file_path)
-    return image_extension[1:]
 
 
 async def get_pict(message: Message, category: str, tag: list) -> None:
@@ -32,19 +28,27 @@ async def get_pict(message: Message, category: str, tag: list) -> None:
     Get random image from https://waifu.pics/ (read https://waifu.pics/docs/)
     """
     random_tag = choice(tag)
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(f'https://api.waifu.pics/{category}/{random_tag}') as response:
+                image = await response.json()
+                image_url = image['url']
+        except (JSONDecodeError, TelegramBadRequest, aiohttp.ClientError, ConnectionError) as e:
+            await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a PicRandom. Please try again later.')
+            logger.error(e)
+        else:
+            extension = await get_image_extension(image_url)
+
     try:
-        image = requests.get(f'https://api.waifu.pics/{category}/{random_tag}').json()
-    except (JSONDecodeError, TelegramBadRequest, ConnectionError):
-        await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a PicRandom. Please try again later.')
-    else:
-        image_url = image['url']
-        extension = await get_image_extension(image_url)
         if extension == 'gif':
             await message.answer_animation(
                 image_url, caption=f'{html.bold("Category")}: {category}, {html.bold("tag")}: {random_tag}')
         else:
             await message.answer_photo(
                 image_url, caption=f'{html.bold("Category")}: {category}, {html.bold("tag")}: {random_tag}')
+    except Exception as e:
+        logger.error(e)
 
 
 @router.message(F.text.casefold() == 'back to categories')
@@ -83,6 +87,7 @@ async def both_categories(message: Message, state: FSMContext) -> None:
 
 @router.message(PicrandomState.choose_category)
 async def and_you_dont_seem_to_understand(message: Message) -> None:
+    logger.debug('User entered category: %s', message.text)
     await message.answer(text='I don\'t understand...')
 
 
@@ -95,14 +100,16 @@ async def choose_tag(message: Message, state: FSMContext) -> None:
     user_message = message.text.lower()[:350]
     data = await state.get_data()
     category = data['category']
-    entered_tags = user_message.replace(',', ' ').split()
-    if entered_tags == ['select', 'all']:
+    entered_tags = set(user_message.replace(',', ' ').split())
+
+    logger.debug('User entered tags: %s', entered_tags)
+
+    if {'select', 'all'}.issubset(entered_tags):
         chosen_tags = waifu_pics_categories[category]
     else:
-        chosen_tags = []
-        for tag in entered_tags:
-            if tag in waifu_pics_categories[category]:
-                chosen_tags.append(tag)
+        chosen_tags = list(entered_tags.intersection(waifu_pics_categories[category]))
+        logger.debug('filtered tags: %s', chosen_tags)
+
     if chosen_tags:
         chosen_list = "all" if len(chosen_tags) == len(waifu_pics_categories[category]) else ", ".join(chosen_tags)
         await message.answer(text=f'Selected tags: <i>{chosen_list}</i>', reply_markup=picrandom_kb.one_category)

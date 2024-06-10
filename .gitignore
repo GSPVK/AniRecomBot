@@ -3,3 +3,4 @@ venv
 .env
 /identifier.sqlite
 /recs_db.db
+/bot.log
