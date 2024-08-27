@@ -17,4 +17,3 @@ RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev build-base firefox
 WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir --upgrade pip -r requirements.txt
-RUN chmod 777 .
