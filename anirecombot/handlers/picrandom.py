@@ -1,16 +1,13 @@
-from json import JSONDecodeError
 from logging import getLogger
 from random import choice
 
 from aiogram import Router, F, html
-from aiogram.client.session import aiohttp
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from anirecombot.keyboards import picrandom_kb
 from anirecombot.states.picrandom import PicrandomState
-from anirecombot.utils.content import get_image_extension
+from anirecombot.utils.content import get_image_extension, get_data_from_url
 
 router = Router()
 logger = getLogger(__name__)
@@ -29,26 +26,23 @@ async def get_pict(message: Message, category: str, tag: list) -> None:
     """
     random_tag = choice(tag)
 
-    async with aiohttp.ClientSession() as session:
+    data = await get_data_from_url(
+        url=f'https://api.waifu.pics/{category}/{random_tag}',
+        message=message,
+        err_msg=f'I\'m sorry, but I\'m currently unable to fetch a PicRandom. Please try again later.'
+    )
+    if data:
         try:
-            async with session.get(f'https://api.waifu.pics/{category}/{random_tag}') as response:
-                image = await response.json()
-                image_url = image['url']
-        except (JSONDecodeError, TelegramBadRequest, aiohttp.ClientError, ConnectionError) as e:
-            await message.answer(f'I\'m sorry, but I\'m currently unable to fetch a PicRandom. Please try again later.')
-            logger.error(e)
-        else:
+            image_url = data['url']
             extension = await get_image_extension(image_url)
-
-    try:
-        if extension == 'gif':
-            await message.answer_animation(
-                image_url, caption=f'{html.bold("Category")}: {category}, {html.bold("tag")}: {random_tag}')
-        else:
-            await message.answer_photo(
-                image_url, caption=f'{html.bold("Category")}: {category}, {html.bold("tag")}: {random_tag}')
-    except Exception as e:
-        logger.error(e)
+            if extension == 'gif':
+                await message.answer_animation(
+                    image_url, caption=f'{html.bold("Category")}: {category}, {html.bold("tag")}: {random_tag}')
+            else:
+                await message.answer_photo(
+                    image_url, caption=f'{html.bold("Category")}: {category}, {html.bold("tag")}: {random_tag}')
+        except Exception as e:
+            logger.error(e)
 
 
 @router.message(F.text.casefold() == 'back to categories')
@@ -104,14 +98,17 @@ async def choose_tag(message: Message, state: FSMContext) -> None:
 
     logger.debug('User entered tags: %s', entered_tags)
 
+    chosen_list = None
     if {'select', 'all'}.issubset(entered_tags):
         chosen_tags = waifu_pics_categories[category]
+        chosen_list = 'all'
     else:
         chosen_tags = list(entered_tags.intersection(waifu_pics_categories[category]))
         logger.debug('filtered tags: %s', chosen_tags)
 
     if chosen_tags:
-        chosen_list = "all" if len(chosen_tags) == len(waifu_pics_categories[category]) else ", ".join(chosen_tags)
+        if not chosen_list:
+            chosen_list = ', '.join(chosen_tags)
         await message.answer(text=f'Selected tags: <i>{chosen_list}</i>', reply_markup=picrandom_kb.one_category)
         await state.update_data(tags=chosen_tags)
         await state.set_state(PicrandomState.one_category)
