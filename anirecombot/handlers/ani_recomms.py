@@ -19,7 +19,7 @@ async def create_recs(message: Message, state: FSMContext, mal_nickname: str, re
     search_msg = await message.answer(
         text=f"Let me conjure some recommendations, <b>{mal_nickname}-san!</b>\n"
              f"the first time it should take approx. 20-30 seconds\n"
-             f"But while they are being generated, you can go back and do something else!"
+             f"But while they are generating, you can go back and do something else!"
     )
 
     # If you want to create a loading animation, then send the bot a GIF and insert the received file_id into
